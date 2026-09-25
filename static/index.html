@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BookQA</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #171a21;
+    --panel-2: #1e222b;
+    --border: #2a2f3a;
+    --text: #e7e9ee;
+    --muted: #8b92a3;
+    --accent: #6d8dff;
+    --accent-hover: #5678f0;
+    --user-bubble: #2a3a6b;
+    --bot-bubble: #1e222b;
+    --err: #7a2b2b;
+    --err-bg: #2a1517;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    height: 100%;
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, "Segoe UI", Roboto, Inter, sans-serif;
+  }
+  body {
+    display: flex;
+    flex-direction: column;
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 32px 20px 20px;
+    min-height: 100vh;
+  }
+  header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 4px;
+  }
+  header .icon { font-size: 32px; }
+  h1 {
+    font-size: 26px;
+    margin: 0;
+    letter-spacing: -0.02em;
+  }
+  .sub {
+    color: var(--muted);
+    margin: 6px 0 24px;
+    font-size: 14.5px;
+  }
+
+  .upload-card {
+    background: var(--panel);
+    border: 1.5px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    text-align: center;
+    transition: border-color .15s, background .15s;
+    cursor: pointer;
+  }
+  .upload-card.drag {
+    border-color: var(--accent);
+    background: var(--panel-2);
+  }
+  .upload-card .hint {
+    color: var(--muted);
+    font-size: 13.5px;
+    margin-top: 6px;
+  }
+  .upload-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .filename {
+    color: var(--text);
+    font-size: 14px;
+    max-width: 260px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  input[type="file"] { display: none; }
+
+  button {
+    padding: 9px 16px;
+    border: 0;
+    border-radius: 8px;
+    background: var(--accent);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .15s, opacity .15s;
+  }
+  button:hover:not(:disabled) { background: var(--accent-hover); }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  button.ghost {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+  }
+
+  #status {
+    margin-top: 12px;
+    font-size: 13.5px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  #status.ready { color: #7fd88f; }
+  #status.error { color: #ff8a8a; }
+
+  .spinner {
+    width: 14px; height: 14px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+    display: none;
+  }
+  .spinner.show { display: inline-block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  #log {
+    flex: 1;
+    margin: 20px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    overflow-y: auto;
+  }
+  .empty-state {
+    color: var(--muted);
+    text-align: center;
+    font-size: 14px;
+    margin-top: 40px;
+    line-height: 1.6;
+  }
+
+  .msg {
+    max-width: 82%;
+    padding: 12px 14px;
+    border-radius: var(--radius);
+    font-size: 14.5px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    animation: rise .15s ease-out;
+  }
+  @keyframes rise { from { opacity: 0; transform: translateY(4px);} to { opacity:1; transform: translateY(0);} }
+  .msg.user {
+    align-self: flex-end;
+    background: var(--user-bubble);
+    border-bottom-right-radius: 4px;
+  }
+  .msg.bot {
+    align-self: flex-start;
+    background: var(--bot-bubble);
+    border: 1px solid var(--border);
+    border-bottom-left-radius: 4px;
+  }
+  .msg.err {
+    align-self: flex-start;
+    background: var(--err-bg);
+    border: 1px solid var(--err);
+    color: #ffb4b4;
+  }
+
+  details.sources {
+    margin-top: 10px;
+    font-size: 12.5px;
+    color: var(--muted);
+  }
+  details.sources summary {
+    cursor: pointer;
+    user-select: none;
+    color: var(--accent);
+  }
+  .src {
+    border-left: 2px solid var(--accent);
+    padding: 6px 0 6px 10px;
+    margin: 8px 0 0;
+    color: #b7bccb;
+  }
+  .src b { color: var(--text); }
+
+  .composer {
+    position: sticky;
+    bottom: 0;
+    display: flex;
+    gap: 8px;
+    padding-top: 12px;
+    background: var(--bg);
+  }
+  #q {
+    flex: 1;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--panel);
+    color: var(--text);
+    font-size: 14.5px;
+    outline: none;
+  }
+  #q:focus { border-color: var(--accent); }
+  #q:disabled { opacity: 0.5; }
+
+  ::-webkit-scrollbar { width: 8px; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 8px; }
+</style>
+</head>
+<body>
+  <header>
+    <span class="icon">📖</span>
+    <h1>BookQA</h1>
+  </header>
+  <p class="sub">Upload a PDF or EPUB, then ask about names, quotes, relations, and details — answers come only from the document, with page citations.</p>
+
+  <div class="upload-card" id="dropzone" onclick="document.getElementById('file').click()">
+    <div class="upload-row">
+      <input type="file" id="file" accept=".pdf,.epub" onchange="onFileChosen()">
+      <span class="filename" id="filename">No file chosen</span>
+      <button id="upBtn" onclick="event.stopPropagation(); upload()" disabled>Upload</button>
+    </div>
+    <div class="hint">Click to browse, or drag a .pdf / .epub here</div>
+    <div id="status"></div>
+  </div>
+
+  <div id="log">
+    <div class="empty-state" id="emptyState">Once your book is indexed, ask something like<br>"Who is the shopkeeper in chapter 3?" or "What does Marla say about the letter?"</div>
+  </div>
+
+  <div class="composer">
+    <input type="text" id="q" placeholder="Ask a question about the book..." disabled
+           onkeydown="if(event.key==='Enter') ask()">
+    <button id="askBtn" onclick="ask()" disabled>Ask</button>
+  </div>
+
+<script>
+let bookId = null;
+const $ = (id) => document.getElementById(id);
+const esc = (s) => s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function onFileChosen() {
+  const f = $("file").files[0];
+  $("filename").textContent = f ? f.name : "No file chosen";
+  $("upBtn").disabled = !f;
+}
+
+// drag & drop
+const dz = $("dropzone");
+["dragenter", "dragover"].forEach(ev =>
+  dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.add("drag"); }));
+["dragleave", "drop"].forEach(ev =>
+  dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.remove("drag"); }));
+dz.addEventListener("drop", e => {
+  const f = e.dataTransfer.files[0];
+  if (!f) return;
+  $("file").files = e.dataTransfer.files;
+  onFileChosen();
+});
+
+function setStatus(text, cls, spinning) {
+  const el = $("status");
+  el.className = cls || "";
+  el.innerHTML = (spinning ? '<span class="spinner show"></span>' : '') + esc(text);
+}
+
+async function upload() {
+  const f = $("file").files[0];
+  if (!f) return;
+  $("upBtn").disabled = true;
+  setStatus("Reading and indexing... this can take a bit for long books", "", true);
+  const fd = new FormData();
+  fd.append("file", f);
+  try {
+    const res = await fetch("/upload", { method: "POST", body: fd });
+    const r = await res.json();
+    if (!res.ok) throw new Error(r.detail || "Upload failed");
+    bookId = r.book_id;
+    setStatus(`Ready — ${r.filename} (${r.chunks} chunks, ${r.filetype.toUpperCase()})`, "ready", false);
+    $("q").disabled = false;
+    $("askBtn").disabled = false;
+    $("q").focus();
+  } catch (e) {
+    setStatus("Error: " + e.message, "error", false);
+  }
+  $("upBtn").disabled = false;
+}
+
+function add(cls, html) {
+  $("emptyState")?.remove();
+  const d = document.createElement("div");
+  d.className = "msg " + cls;
+  d.innerHTML = html;
+  $("log").appendChild(d);
+  d.scrollIntoView({ behavior: "smooth", block: "end" });
+  return d;
+}
+
+async function ask() {
+  const q = $("q").value.trim();
+  if (!q) return;
+  if (!bookId) { add("err", "Upload a book first."); return; }
+  add("user", esc(q));
+  $("q").value = "";
+  $("askBtn").disabled = true;
+  $("q").disabled = true;
+
+  const thinking = add("bot", '<span class="spinner show"></span> Reading the relevant pages...');
+
+  try {
+    const res = await fetch("/ask", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ book_id: bookId, question: q }),
+    });
+    const r = await res.json();
+    if (!res.ok) throw new Error(r.detail || "Something went wrong");
+    const srcs = r.sources.map(s =>
+      `<div class="src"><b>Page ${s.page}</b><br>${esc(s.text)}</div>`).join("");
+    thinking.className = "msg bot";
+    thinking.innerHTML = esc(r.answer) +
+      `<details class="sources"><summary>Show source excerpts (${r.sources.length})</summary>${srcs}</details>`;
+  } catch (e) {
+    thinking.className = "msg err";
+    thinking.textContent = "Error: " + e.message;
+  }
+  $("askBtn").disabled = false;
+  $("q").disabled = false;
+  $("q").focus();
+}
+</script>
+</body>
+</html>

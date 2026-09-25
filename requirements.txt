@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+python-multipart
+pymupdf
+rank-bm25
+numpy
+google-genai
+python-dotenv
